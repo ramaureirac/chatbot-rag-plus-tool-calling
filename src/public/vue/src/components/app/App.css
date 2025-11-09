@@ -1,0 +1,10 @@
+body {
+  background-color: #141414;
+  color: whitesmoke;
+  font-size: 1.15rem;
+}
+
+#app {
+  text-align: center;
+  margin-top: 40px;
+}

@@ -1,0 +1,67 @@
+services:
+  etcd:
+    container_name: etcd
+    image: quay.io/coreos/etcd:v3.5.18
+    environment:
+      ETCD_AUTO_COMPACTION_MODE: revision
+      ETCD_AUTO_COMPACTION_RETENTION: 1000
+      ETCD_QUOTA_BACKEND_BYTES: 4294967296
+      ETCD_SNAPSHOT_COUNT: 50000
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/etcd:/etcd
+    command: etcd -advertise-client-urls=http://etcd:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+
+  minio:
+    container_name: minio
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
+    command: minio server /minio_data --console-address ":9001"
+
+  milvus:
+    container_name: milvus
+    image: milvusdb/milvus:v2.6.4
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MQ_TYPE: woodpecker
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/milvus:/var/lib/milvus
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      - "etcd"
+      - "minio"
+
+  ragbot:
+    container_name: ragbot
+    image: ramaureirac/devops-ragbot:latest
+    ports:
+      - "8080:8080"
+    command: ["serve"]
+    environment:
+      GITLAB_URL: $GITLAB_URL
+      GITLAB_TOKEN: $GITLAB_TOKEN
+      OLLAMA_URL: $OLLAMA_URL
+      OLLAMA_CHAT_MODEL: $OLLAMA_CHAT_MODEL
+      OLLAMA_EMBED_MODEL: $OLLAMA_EMBED_MODEL
+      OLLAMA_EMBED_SIZE: $OLLAMA_EMBED_SIZE
+      OLLAMA_GEN_MODEL: $OLLAMA_GEN_MODEL
+      GIN_MODE: $GIN_MODE
+      GIN_PORT: $GIN_PORT
+      MILVUS_URI: $MILVUS_URI
+      SESSION_TIMEOUT: $SESSION_TIMEOUT
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/ragbot:/srv/pdfs:ro
+    depends_on:
+      - milvus
