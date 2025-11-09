@@ -69,6 +69,7 @@ While Docker Compose is running. Put your PDFs into `docker/volumes/ragbot`, RAG
 
 Visit http://localhost:8080 to consume ChatBot Service
 
+![alt text](docs/images/chat.png)
 
 ## Relevant Notes
 
